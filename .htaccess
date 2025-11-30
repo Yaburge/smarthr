@@ -1,0 +1,19 @@
+# Turn on the rewrite engine
+RewriteEngine On
+
+# Set the base directory for the rewrite rules
+# This is the most important part!
+RewriteBase /smarthr/
+
+# ---
+
+# Prevent looping
+RewriteCond %{REQUEST_URI} !/index\.php$
+
+# If the requested file doesn't exist...
+RewriteCond %{REQUEST_FILENAME} !-f
+# ...and it's not a directory...
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# ...then rewrite the request to index.php (relative to the RewriteBase)
+RewriteRule . index.php [L]
