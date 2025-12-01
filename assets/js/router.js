@@ -8,7 +8,8 @@ import {
 // At the top of assets/js/router.js
 import { closeModal } from './ui.js';
 import { handleLogin, logout } from '../../ajax/auth.js';
-import { handleDepartmentForms, loadDepartments } from '../../ajax/departments.js';
+import { handleDepartmentForms } from '../../ajax/departments.js';
+import { handleEmployeeForms, initEmployeeFilters } from '../../ajax/employees.js';
 
 const BASE_PATH = '/SmartHR';
 
@@ -64,8 +65,29 @@ export async function navigate(path) {
         }
     }
 
-    if (cleanPath === '/department') {
-        loadDepartments();
+    
+
+    if (cleanPath === '/add-employee') {
+        const deptSelect = document.getElementById('department_select');
+        const desSelect = document.getElementById('designation_select');
+        
+        if (deptSelect && desSelect) {
+            deptSelect.addEventListener('change', function() {
+                const deptId = this.value;
+                const options = desSelect.querySelectorAll('option');
+                
+                options.forEach(opt => {
+                    if (opt.dataset.department === deptId) {
+                        opt.style.display = 'block';
+                    } else if (opt.dataset.department) {
+                        opt.style.display = 'none';
+                    }
+                });
+                
+                desSelect.value = '';
+                desSelect.querySelector('option').textContent = 'Select Designation';
+            });
+        }
     }
 
     if (['/add-employee','/view-employee'].includes(cleanPath)) {
@@ -102,6 +124,10 @@ export async function navigate(path) {
       } catch (err) { 
         console.warn('view-employee error', err); 
       }
+    }
+
+    if (cleanPath === '/employee') {
+        initEmployeeFilters();
     }
 
     // Update Browser URL
@@ -224,6 +250,9 @@ document.addEventListener('submit', function (e) {
     handleDepartmentForms(e);
   }
   
-
+  if (e.target.id === 'add-employee-form') {
+      e.preventDefault(); 
+      handleEmployeeForms(e);
+  }
   // Add other forms here as needed
 });

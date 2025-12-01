@@ -19,10 +19,14 @@ function createDepartment($name) {
 
 function getAllDepartments() {
     global $pdo;
-    $sql = "SELECT * FROM departments ORDER BY name ASC";
-    return $pdo->query($sql)->fetchAll();
+    
+    try {
+        $stmt = $pdo->query("SELECT * FROM departments ORDER BY name ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
 }
-
 // 1. Get List of Depts + Counts
 function getDepartmentsWithStats() {
     global $pdo;
@@ -46,5 +50,39 @@ function getDepartmentPreviewEmployees($department_id) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$department_id]);
     return $stmt->fetchAll();
+}
+
+function getDepartmentById($id) {
+    global $pdo;
+    $sql = "SELECT * FROM departments WHERE department_id = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id]);
+    return $stmt->fetch();
+}
+
+
+
+
+function getAllDesignations() {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->query("SELECT * FROM designations ORDER BY name ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function getDesignationsByDepartment($department_id) {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM designations WHERE department_id = ? ORDER BY name ASC");
+        $stmt->execute([$department_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
 }
 ?>

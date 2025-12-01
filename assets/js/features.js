@@ -3,8 +3,16 @@ import { closeModal } from './ui.js';
 export const BASE_PATH = '/SmartHR';
 
 export function toggleFilterModal() {
-  const modal = document.getElementById('filter-modal');
-  modal.classList.toggle('open');
+    const filterModal = document.getElementById('filter-modal');
+    
+    if (filterModal) {
+        // Toggle display
+        if (filterModal.style.display === 'block') {
+            filterModal.style.display = 'none';
+        } else {
+            filterModal.style.display = 'block';
+        }
+    }
 }
 
 export function processAction(endpoint, id) {
