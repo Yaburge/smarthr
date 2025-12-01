@@ -5,6 +5,10 @@ import {
   applyEmployeeViewMode,
   setupVerticalTabs  
 } from './features.js';
+// At the top of assets/js/router.js
+import { closeModal } from './ui.js';
+import { handleLogin, logout } from '../../ajax/auth.js';
+import { handleDepartmentForms, loadDepartments } from '../../ajax/departments.js';
 
 const BASE_PATH = '/SmartHR';
 
@@ -37,6 +41,8 @@ export async function navigate(path) {
     cleanPath = '/home';
   }
 
+  
+
   const target = document.getElementById('display');
   target.innerHTML = `<p>Loading...</p>`;
   
@@ -49,6 +55,18 @@ export async function navigate(path) {
     target.innerHTML = await res.text();
 
     // --- PAGE SPECIFIC INIT LOGIC ---
+
+    if (cleanPath === '/login') {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            // 2. Attach the listener
+            loginForm.addEventListener('submit', handleLogin);
+        }
+    }
+
+    if (cleanPath === '/department') {
+        loadDepartments();
+    }
 
     if (['/add-employee','/view-employee'].includes(cleanPath)) {
       try { 
@@ -166,8 +184,46 @@ document.addEventListener('click', function (e) {
     toggleFilterModal();
   }
 
+  if (e.target.closest('#cancelPromptBtn')) {
+        closeModal();
+  }
+
   const toggleBtn = e.target.closest('.passwordField span');
   if (toggleBtn) {
     togglePassword(toggleBtn);
   }
+
+  const confirmBtn = e.target.closest('#confirmPromptBtn');
+    
+    if (confirmBtn) {
+        const action = confirmBtn.getAttribute('data-action');
+
+        // Logic for Logout
+        if (action === 'logout') {
+            logout();     // Call the function from auth.js
+            closeModal(); // Close the modal
+        }
+        
+        // Future Logic (e.g., Delete Department)
+        // if (action === 'delete_department') { ... }
+    }
+
+  const logoutBtn = e.target.closest('#logoutBtn'); 
+  if (logoutBtn) {
+      e.preventDefault();
+      logout();
+  }
+
+});
+
+
+document.addEventListener('submit', function (e) {
+  // Department Forms
+  if (e.target.id === 'addDepartmentForm') {
+    e.preventDefault(); // Prevent default HERE
+    handleDepartmentForms(e);
+  }
+  
+
+  // Add other forms here as needed
 });

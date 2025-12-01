@@ -9,8 +9,8 @@
 
     <button class="tableBtn outlineBtn"
             data-trigger="modal"
-            data-title="Logout Confirmation"
-            data-url="ajax/prompt.php?id=105&msg=Are you sure you want to Logout? #105?&action=#&type=danger">
+            data-title="Confirm Logout"
+            data-url="ajax/prompt.php?msg=Are you sure you want to log out?&action=logout&type=danger">
         <i class="fa-solid fa-right-from-bracket fa-lg"></i>
     </button>
 </nav>

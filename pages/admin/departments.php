@@ -1,10 +1,20 @@
+<?php
+define('BASE_PATH', dirname(dirname(__DIR__)));
+require_once BASE_PATH . '/includes/queries/departments.php';
+
+// Get all departments with their total member count
+$departments = getDepartmentsWithStats();
+?>
+
 <section class="section">
   <div class="flex-column gap-40">
+    
     <div class="row-fixed align-center">
       <div class="flex-column gap-10">
         <h1 class="sub-header bold">Department</h1>
-        <p class="gray-text"><span>All Department</span></p>
+        <p class="gray-text"><span>All Departments</span></p>
       </div>
+      
       <button type="button" 
               class="cta rounded" 
               id="createBtn"
@@ -15,259 +25,74 @@
       </button>
     </div>
 
-    <!-- THE GRID OF THE CARDS -->
     <div class="grid grid-2 department-grid">
-      <!-- WHOLE CARD -->
-      <div class="department-card rounded shadow">
-        <!-- CARD HEADER -->
-        <div class="row-fixed align-center department-card-header">
-          <div>
-            <h1 class="sub-header bold">Information Technology</h1>
-            <p class="gray-text">20 Members</p>
+      
+      <?php if (empty($departments)): ?>
+          <div class="width-100 text-center gray-text padding-50">
+              No departments found. Please add one.
           </div>
+      <?php else: ?>
+      
+          <?php foreach ($departments as $dept): ?>
+              <?php 
+                  // Fetch top 4 members for this specific department
+                  // (Make sure getDepartmentPreviewEmployees exists in your queries file)
+                  $previewMembers = getDepartmentPreviewEmployees($dept['department_id']); 
+              ?>
 
-          <button type="button" class="noOutlineBtn outlineBtn accent-400" onclick="navigate('/view-department')">View All</button>
-        </div>
-        <!-- CARD HEADER -->
+              <div class="department-card rounded shadow">
+                
+                <div class="row-fixed align-center department-card-header">
+                  <div>
+                    <h1 class="sub-header bold"><?php echo htmlspecialchars($dept['name']); ?></h1>
+                    <p class="gray-text"><?php echo $dept['member_count']; ?> Members</p>
+                  </div>
 
-        <!-- NOTE: LIMIT TO 4 EMPLOYEE LAT MA SHOW -->
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn" onclick="navigate('/view-employee')"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
+                  <button type="button" 
+                          class="noOutlineBtn outlineBtn accent-400" 
+                          onclick="navigate('/view-department?id=<?php echo $dept['department_id']; ?>')">
+                      View All
+                  </button>
+                </div>
+                <?php if (!empty($previewMembers)): ?>
+                    
+                    <?php foreach ($previewMembers as $emp): ?>
+                        <?php 
+                            $fullname = $emp['first_name'] . ' ' . $emp['last_name'];
+                            $designation = $emp['designation'] ?? 'Employee';
+                            // Handle default image
+                            $img = !empty($emp['profile_picture']) ? $emp['profile_picture'] : 'iso.jpg';
+                        ?>
+                        
+                        <div class="row-fixed align-center department-card-body">
+                          <div class="row-fixed align-center justify-left">
+                            <img src="assets/media/images/<?php echo $img; ?>" alt="Employee-img" class="t-img">
+                            <div>
+                              <h1><?php echo htmlspecialchars($fullname); ?></h1>
+                              <p class="gray-text"><?php echo htmlspecialchars($designation); ?></p>
+                            </div>
+                          </div>
+                          <button class="noOutlineBtn outlineBtn" 
+                                  onclick="navigate('/view-employee?id=<?php echo $emp['employee_id']; ?>')">
+                              <i class="fa-regular fa-eye fa-lg"></i>
+                          </button>
+                        </div>
+                        <?php endforeach; ?>
 
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
+                <?php else: ?>
+                    
+                    <div class="flex-column text-center gap-20 padding-50">
+                      <h1 class="bold gray-text">No Employees</h1>
+                      <p class="light-text">Please add some Employees</p>
+                    </div>
 
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
+                <?php endif; ?>
+                
+              </div>
+              <?php endforeach; ?>
+      
+      <?php endif; ?>
 
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        <div class="flex-column text-center gap-20 padding-50" style="display: none">
-          <h1 class="bold gray-text">No Employees</h1>
-          <p class="light-text">Please add some Employees</p>
-        </div>
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        
-        <!-- WHOLE CARD -->
-      </div>
-
-
-      <div class="department-card rounded shadow"> <!-- WHOLE CARD -->
-        <div class="row-fixed align-center department-card-header"> <!-- CARD HEADER -->
-          <div>
-            <h1 class="sub-header bold">GenEd</h1>
-            <p class="gray-text">0 Member</p>
-          </div>
-
-          <button type="button" class="noOutlineBtn outlineBtn accent-400">View All</button>
-        </div>  <!-- CARD HEADER -->
-
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        <div class="flex-column text-center gap-20 padding-50">
-          <h1 class="bold gray-text">No Employees</h1>
-          <p class="light-text">Please add some Employees</p>
-        </div>
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-
-      </div> <!-- WHOLE CARD -->
-
-
-      <!-- WHOLE CARD -->
-      <div class="department-card rounded shadow">
-        <!-- CARD HEADER -->
-        <div class="row-fixed align-center department-card-header">
-          <div>
-            <h1 class="sub-header bold">Hospitality Management</h1>
-            <p class="gray-text">20 Members</p>
-          </div>
-
-          <button type="button" class="noOutlineBtn outlineBtn accent-400">View All</button>
-        </div>
-        <!-- CARD HEADER -->
-
-        <!-- NOTE: LIMIT TO 4 EMPLOYEE LAT MA SHOW -->
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        <div class="flex-column text-center gap-20 padding-50" style="display: none">
-          <h1 class="bold gray-text">No Employees</h1>
-          <p class="light-text">Please add some Employees</p>
-        </div>
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        
-        <!-- WHOLE CARD -->
-      </div>
-
-
-      <!-- WHOLE CARD -->
-      <div class="department-card rounded shadow">
-        <!-- CARD HEADER -->
-        <div class="row-fixed align-center department-card-header">
-          <div>
-            <h1 class="sub-header bold">Filipino</h1>
-            <p class="gray-text">20 Members</p>
-          </div>
-
-          <button type="button" class="noOutlineBtn outlineBtn accent-400">View All</button>
-        </div>
-        <!-- CARD HEADER -->
-
-        <!-- NOTE: LIMIT TO 4 EMPLOYEE LAT MA SHOW -->
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-        <div class="row-fixed align-center department-card-body">
-          <div class="row-fixed align-center justify-left">
-            <img src="assets/media/images/iso.jpg" alt="Employee-img" class="t-img">
-            <div>
-              <h1>Harold A. Egrubay</h1>
-              <p class="gray-text">Instructor</p>
-            </div>
-          </div>
-          <button class="noOutlineBtn outlineBtn"><i class="fa-regular fa-eye fa-lg"></i></button>
-        </div>
-        <!-- EMPLOYEE INFORMATION (IG LOOP LA ININ) -->
-
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        <div class="flex-column text-center gap-20 padding-50" style="display: none">
-          <h1 class="bold gray-text">No Employees</h1>
-          <p class="light-text">Please add some Employees</p>
-        </div>
-        <!-- NOTE: SHOW THIS WHEN NO DATA IS DETECTED -->
-        
-        <!-- WHOLE CARD -->
-      </div>
-
-    </div> <!-- THE GRID OF THE CARDS -->
-    
-  </div>
+    </div> 
+    </div>
 </section>

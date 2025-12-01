@@ -5,17 +5,19 @@
     <p class="gray-text">Sign in now to access your account.</p>
   </div>
 
-  <form action="#" class="flex-column gap-50 bg-white padding-50 rounded shadow">
+  <form id="loginForm" class="flex-column gap-50 bg-white padding-50 rounded shadow">
+    
+    <div id="feedback" class="red-text text-center font-size-14"></div>
 
     <div class="input-container">
-      <label for="usernamme">Username</label>
-      <input type="text" name="username" placeholder="Enter your username">
+      <label for="username">Username</label>
+      <input type="text" name="username" placeholder="Enter your username" required>
     </div>
 
     <div class="input-container">
       <label for="password">Password</label>
       <div class="passwordField">
-        <input type="password" name="password" id="password" placeholder="Enter your password">
+        <input type="password" name="password" id="password" placeholder="Enter your password" required>
         <span class="password-toggle" id="togglePassword">
           <i class="fa-regular fa-eye fa-lg show-icon"></i>
           <i class="fa-regular fa-eye-slash fa-lg hide-icon" style="display:none;"></i>
@@ -23,7 +25,7 @@
       </div>
     </div>
 
-    <input type="submit" value="Sign in" class="btn solidBtn">
+    <button type="submit" class="btn solidBtn">Sign in</button>
   </form>
 
 </section>
