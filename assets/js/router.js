@@ -8,7 +8,7 @@ import {
 import { closeModal } from './ui.js';
 import { handleLogin, logout } from '../../ajax/auth.js';
 import { handleDepartmentForms, initDepartmentViewFilters } from '../../ajax/departments.js';
-import { handleEmployeeForms, initEmployeeFilters, handleEmployeeActions, handleEmployeeActionConfirm  } from '../../ajax/employees.js';
+import { initEmployeeFilters, handleEmployeeForms, deleteEmployee, activateEmployee, deactivateEmployee } from '../../ajax/employees.js';
 
 const BASE_PATH = '/SmartHR';
 
@@ -191,8 +191,6 @@ function initPageScripts(basePath) {
 
     if (basePath === '/employee') {
         initEmployeeFilters();
-    handleEmployeeActions();
-    handleEmployeeActionConfirm();
     }
 
     if (basePath === '/view-department') {
@@ -262,19 +260,38 @@ document.addEventListener('click', function (e) {
   }
 
   const confirmBtn = e.target.closest('#confirmPromptBtn');
-  if (confirmBtn) {
-    const action = confirmBtn.getAttribute('data-action');
-    if (action === 'logout') {
-      logout();
-      closeModal();
+    if (confirmBtn) {
+        const action = confirmBtn.getAttribute('data-action');
+        const id = confirmBtn.getAttribute('data-id');
+
+        if (action === 'logout') {
+            logout();
+            closeModal();
+        }
+        
+        if (action === 'delete_employee') {
+            deleteEmployee(id);
+            closeModal();
+        }
+
+        if (action === 'activate_employee') {
+            activateEmployee(id);
+            closeModal();
+        }
+
+        if (action === 'deactivate_employee') {
+            deactivateEmployee(id);
+            closeModal();
+        }
     }
-  }
 
   const logoutBtn = e.target.closest('#logoutBtn'); 
   if (logoutBtn) {
     e.preventDefault();
     logout();
   }
+
+  
 });
 
 document.addEventListener('submit', function (e) {

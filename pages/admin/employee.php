@@ -124,21 +124,26 @@ $paginatedEmployees = array_slice($employees, 0, $perPage);
                 <button class="tableBtn outlineBtn" onclick="navigate('/view-employee?id=<?php echo $emp['employee_id']; ?>')">
                   <i class="fa-regular fa-eye"></i>
                 </button>
-                <button class="tableBtn outlineBtn delete-employee-btn"
-                        data-employee-id="<?php echo $emp['employee_id']; ?>"
-                        data-employee-name="<?php echo htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?>">
+                
+                <button class="tableBtn outlineBtn"
+                        data-trigger="modal"
+                        data-title="Confirm Deletion"
+                        data-url="pages/admin/employee/delete.php?id=<?php echo $emp['employee_id']; ?>&name=<?php echo urlencode($emp['first_name'] . ' ' . $emp['last_name']); ?>">
                   <i class="fa-regular fa-trash-can"></i>
                 </button>
+
                 <?php if ($emp['employment_status'] != 'Inactive'): ?>
-                <button class="tableBtn outlineBtn deactivate-employee-btn"
-                        data-employee-id="<?php echo $emp['employee_id']; ?>"
-                        data-employee-name="<?php echo htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?>">
+                <button class="tableBtn outlineBtn"
+                        data-trigger="modal"
+                        data-title="Confirm Deactivation"
+                        data-url="pages/admin/employee/deactivate.php?id=<?php echo $emp['employee_id']; ?>&name=<?php echo urlencode($emp['first_name'] . ' ' . $emp['last_name']); ?>">
                   <i class="fa-solid fa-lock"></i>
                 </button>
                 <?php else: ?>
-                <button class="tableBtn outlineBtn activate-employee-btn"
-                        data-employee-id="<?php echo $emp['employee_id']; ?>"
-                        data-employee-name="<?php echo htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?>">
+                <button class="tableBtn outlineBtn"
+                        data-trigger="modal"
+                        data-title="Confirm Activation"
+                        data-url="pages/admin/employee/activate.php?id=<?php echo $emp['employee_id']; ?>&name=<?php echo urlencode($emp['first_name'] . ' ' . $emp['last_name']); ?>">
                   <i class="fa-solid fa-lock-open"></i>
                 </button>
                 <?php endif; ?>

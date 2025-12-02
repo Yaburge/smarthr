@@ -36,7 +36,6 @@ $departments = getDepartmentsWithStats();
           <?php foreach ($departments as $dept): ?>
               <?php 
                   // Fetch top 4 members for this specific department
-                  // (Make sure getDepartmentPreviewEmployees exists in your queries file)
                   $previewMembers = getDepartmentPreviewEmployees($dept['department_id']); 
               ?>
 
@@ -60,13 +59,14 @@ $departments = getDepartmentsWithStats();
                         <?php 
                             $fullname = $emp['first_name'] . ' ' . $emp['last_name'];
                             $designation = $emp['designation'] ?? 'Employee';
-                            // Handle default image
-                            $img = !empty($emp['profile_picture']) ? $emp['profile_picture'] : 'iso.jpg';
                         ?>
                         
                         <div class="row-fixed align-center department-card-body">
                           <div class="row-fixed align-center justify-left">
-                            <img src="assets/media/images/<?php echo $img; ?>" alt="Employee-img" class="t-img">
+                            <img src="/SmartHR/assets/media/uploads/<?php echo htmlspecialchars($emp['profile_picture']); ?>" 
+                                 alt="Employee-img" 
+                                 class="t-img"
+                                 onerror="this.src='/SmartHR/assets/media/images/default_avatar.jpg'">
                             <div>
                               <h1><?php echo htmlspecialchars($fullname); ?></h1>
                               <p class="gray-text"><?php echo htmlspecialchars($designation); ?></p>

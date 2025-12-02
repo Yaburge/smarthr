@@ -182,89 +182,57 @@ function showConfirmModal(title, message, action, employeeId) {
     modal.style.display = 'flex';
 }
 
-export function handleEmployeeActionConfirm() {
-    document.addEventListener('click', function(e) {
-        const confirmBtn = e.target.closest('#confirmPromptBtn');
-        if (!confirmBtn) return;
-        
-        const action = confirmBtn.getAttribute('data-action');
-        const employeeId = confirmBtn.getAttribute('data-id');
-        
-        if (action === 'delete_employee') {
-            deleteEmployee(employeeId);
-        } else if (action === 'deactivate_employee') {
-            deactivateEmployee(employeeId);
-        } else if (action === 'activate_employee') {
-            activateEmployee(employeeId);
+export function deleteEmployee(id) {
+    const formData = new FormData();
+    formData.append('employee_id', id);
+
+    fetch('actions/employee/delete.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            // Optional: Show success feedback?
+            location.reload(); 
+        } else {
+            alert(data.message);
         }
     });
 }
 
-function deleteEmployee(employeeId) {
-    fetch('/SmartHR/actions/employee/delete.php', {
+export function activateEmployee(id) {
+    const formData = new FormData();
+    formData.append('employee_id', id);
+
+    fetch('actions/employee/activate.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `employee_id=${employeeId}`
+        body: formData
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload(); // Refresh the employee list
+        if(data.success) {
+            location.reload(); 
         } else {
-            alert('Error: ' + data.message);
+            alert(data.message);
         }
-    })
-    .catch(err => {
-        console.error('Delete error:', err);
-        alert('An error occurred');
     });
 }
 
-function deactivateEmployee(employeeId) {
-    fetch('/SmartHR/actions/employee/deactivate.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `employee_id=${employeeId}`
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(err => {
-        console.error('Deactivate error:', err);
-        alert('An error occurred');
-    });
-}
+export function deactivateEmployee(id) {
+    const formData = new FormData();
+    formData.append('employee_id', id);
 
-function activateEmployee(employeeId) {
-    fetch('/SmartHR/actions/employee/activate.php', {
+    fetch('actions/employee/deactivate.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `employee_id=${employeeId}`
+        body: formData
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
+        if(data.success) {
+            location.reload(); 
         } else {
-            alert('Error: ' + data.message);
+            alert(data.message);
         }
-    })
-    .catch(err => {
-        console.error('Activate error:', err);
-        alert('An error occurred');
     });
 }

@@ -288,90 +288,54 @@ function updateEmployee($data) {
 
 function deleteEmployee($employee_id) {
     global $pdo;
-    
     try {
         $pdo->beginTransaction();
         
-        // Get employee data to delete files
-        $employee = getEmployeeById($employee_id);
-        
-        if (!$employee) {
-            throw new Exception('Employee not found');
-        }
-        
-        // Delete profile picture
-        if ($employee['profile_picture'] && $employee['profile_picture'] !== 'default_avatar.jpg') {
-            $filePath = BASE_PATH . "/assets/media/uploads/" . $employee['profile_picture'];
-            if (file_exists($filePath)) {
-                unlink($filePath);
-            }
-        }
-        
-        // Delete all document files
-        if (!empty($employee['documents'])) {
-            foreach ($employee['documents'] as $doc) {
-                $filePath = BASE_PATH . "/assets/media/uploads/" . $doc['file_path'];
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-            }
-        }
-        
-        // Delete from database (CASCADE will handle related records)
-        $sql = "DELETE FROM employees WHERE employee_id = ?";
+        // 1. Get info to delete files
+        $sql = "SELECT profile_picture FROM employees WHERE employee_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$employee_id]);
-        
+        $emp = $stmt->fetch();
+
+        // 2. Delete Profile Pic
+        if ($emp && $emp['profile_picture'] && $emp['profile_picture'] !== 'default_avatar.jpg') {
+            $path = BASE_PATH . "/assets/media/uploads/" . $emp['profile_picture'];
+            if (file_exists($path)) unlink($path);
+        }
+
+        // 3. Delete Documents
+        $docSql = "SELECT file_path FROM employee_documents WHERE employee_id = ?";
+        $docStmt = $pdo->prepare($docSql);
+        $docStmt->execute([$employee_id]);
+        while ($doc = $docStmt->fetch()) {
+            $docPath = BASE_PATH . "/assets/media/uploads/" . $doc['file_path'];
+            if (file_exists($docPath)) unlink($docPath);
+        }
+
+        // 4. Delete Record (Cascades to documents/users/attendance usually, but manual delete is safer)
+        $delSql = "DELETE FROM employees WHERE employee_id = ?";
+        $delStmt = $pdo->prepare($delSql);
+        $delStmt->execute([$employee_id]);
+
         $pdo->commit();
-        
-        return [
-            'success' => true,
-            'message' => 'Employee deleted successfully!'
-        ];
-        
+        return ['success' => true, 'message' => 'Employee deleted successfully'];
+
     } catch (Exception $e) {
         $pdo->rollBack();
-        return [
-            'success' => false,
-            'message' => 'Delete Error: ' . $e->getMessage()
-        ];
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
     }
 }
 
 function updateEmployeeStatus($employee_id, $status) {
     global $pdo;
-    
     try {
-        // Validate status
-        $validStatuses = ['Regular', 'Part-time', 'Inactive'];
-        if (!in_array($status, $validStatuses)) {
-            throw new Exception('Invalid status');
-        }
-        
-        $sql = "UPDATE employees SET 
-                employment_status = ?,
-                updated_at = NOW()
-                WHERE employee_id = ?";
-        
+        $sql = "UPDATE employees SET employment_status = ? WHERE employee_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$status, $employee_id]);
         
-        if ($stmt->rowCount() === 0) {
-            throw new Exception('Employee not found or status unchanged');
-        }
-        
-        $actionText = $status === 'Inactive' ? 'deactivated' : 'activated';
-        
-        return [
-            'success' => true,
-            'message' => "Employee {$actionText} successfully!"
-        ];
-        
+        return ['success' => true, 'message' => 'Status updated to ' . $status];
     } catch (Exception $e) {
-        return [
-            'success' => false,
-            'message' => 'Update Error: ' . $e->getMessage()
-        ];
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
     }
 }
 ?>
