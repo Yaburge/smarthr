@@ -85,4 +85,6 @@ function getDesignationsByDepartment($department_id) {
         return [];
     }
 }
+
+
 ?>

@@ -5,11 +5,10 @@ import {
   applyEmployeeViewMode,
   setupVerticalTabs  
 } from './features.js';
-// At the top of assets/js/router.js
 import { closeModal } from './ui.js';
 import { handleLogin, logout } from '../../ajax/auth.js';
-import { handleDepartmentForms } from '../../ajax/departments.js';
-import { handleEmployeeForms, initEmployeeFilters } from '../../ajax/employees.js';
+import { handleDepartmentForms, initDepartmentViewFilters } from '../../ajax/departments.js';
+import { handleEmployeeForms, initEmployeeFilters, handleEmployeeActions, handleEmployeeActionConfirm  } from '../../ajax/employees.js';
 
 const BASE_PATH = '/SmartHR';
 
@@ -31,43 +30,85 @@ const routes = {
 };
 
 export async function navigate(path) {
-  let cleanPath = path;
+  const [cleanPath, queryString] = path.split('?');
+  let basePath = cleanPath;
+  
   const baseRegex = new RegExp(`^${BASE_PATH}`, 'i'); 
 
-  if (baseRegex.test(cleanPath)) {
-    cleanPath = cleanPath.replace(baseRegex, '');
+  if (baseRegex.test(basePath)) {
+    basePath = basePath.replace(baseRegex, '');
   }
 
-  if (cleanPath === '' || cleanPath === '/') {
-    cleanPath = '/home';
+  if (basePath === '' || basePath === '/') {
+    basePath = '/home';
   }
-
-  
 
   const target = document.getElementById('display');
   target.innerHTML = `<p>Loading...</p>`;
   
-  const file = routes[cleanPath] || routes['/404'];
-  const fetchPath = `${BASE_PATH}${file}`;
+  const file = routes[basePath] || routes['/404'];
+  
+  let fetchPath = `${BASE_PATH}${file}`;
+  if (queryString) {
+    fetchPath += `?${queryString}`;
+  }
 
   try {
     const res = await fetch(fetchPath, { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load');
+    
+    // LOAD HTML FIRST
     target.innerHTML = await res.text();
 
-    // --- PAGE SPECIFIC INIT LOGIC ---
+    // THEN INITIALIZE - Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      initPageScripts(basePath);
+    }, 100);
 
-    if (cleanPath === '/login') {
+    // Update Browser URL
+    let browserPath = `${BASE_PATH}${basePath}`;
+    if (queryString) {
+      browserPath += `?${queryString}`;
+    }
+    if (window.location.pathname + window.location.search !== browserPath) {
+      history.pushState({ path: basePath, query: queryString }, '', browserPath);
+    }
+
+  } catch (err) {
+    target.innerHTML = `<p>Error: ${err.message}</p>`;
+  }
+
+  // UI UPDATES
+  const HIDE_LAYOUT = ['/login'];
+  const shouldHideLayout = HIDE_LAYOUT.includes(basePath);
+
+  toggleLayout(shouldHideLayout);
+
+  if (!shouldHideLayout) {
+      updateActiveSidebar(basePath);
+  }
+}
+
+// CENTRALIZED PAGE INITIALIZATION
+function initPageScripts(basePath) {
+    console.log('Initializing scripts for:', basePath);
+
+    if (basePath === '/login') {
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
-            // 2. Attach the listener
             loginForm.addEventListener('submit', handleLogin);
         }
     }
 
-    
+    if (basePath === '/add-employee') {
+        // Initialize multi-step form for ADD mode
+        const addForm = document.querySelector('#add-employee-form');
+        if (addForm) {
+            console.log('Initializing add-employee-form');
+            initMultiStepForm('#add-employee-form');
+        }
 
-    if (cleanPath === '/add-employee') {
+        // Department/Designation filter
         const deptSelect = document.getElementById('department_select');
         const desSelect = document.getElementById('designation_select');
         
@@ -90,99 +131,96 @@ export async function navigate(path) {
         }
     }
 
-    if (['/add-employee','/view-employee'].includes(cleanPath)) {
-      try { 
-          initMultiStepForm('#add-employee-form'); 
-      } catch (err) { 
-          console.warn('initMultiStepForm error', err); 
-      }
-    }
-
-    if (['/view-employee'].includes(cleanPath)) {
-       // ... (Keep your existing view-employee logic here) ...
-       try { 
-        applyEmployeeViewMode(true); 
-        setupVerticalTabs(initMultiStepForm);
-
-        let isEditing = false; 
-        const editButton = document.getElementById("editBtn");
-
-        if (editButton) {
-          editButton.textContent = "Edit Profile"; 
-          editButton.addEventListener("click", () => {
-            if (isEditing) {
-              applyEmployeeViewMode(true); 
-              editButton.textContent = "Edit Profile";
-              isEditing = false;
-            } else {
-              applyEmployeeViewMode(false); 
-              editButton.textContent = "Cancel Edit"; 
-              isEditing = true;
-            }
-          });
+    if (basePath === '/view-employee') {
+        // Initialize multi-step form for EDIT mode
+        const editForm = document.querySelector('#edit-employee-form');
+        if (editForm) {
+            console.log('Initializing edit-employee-form');
+            initMultiStepForm('#edit-employee-form');
         }
-      } catch (err) { 
-        console.warn('view-employee error', err); 
-      }
+
+        // Apply view mode and setup vertical tabs
+        try { 
+            applyEmployeeViewMode(true); 
+            setupVerticalTabs(initMultiStepForm);
+
+            let isEditing = false; 
+            const editButton = document.getElementById("editBtn");
+
+            if (editButton) {
+                editButton.textContent = "Edit Profile"; 
+                editButton.addEventListener("click", () => {
+                    if (isEditing) {
+                        applyEmployeeViewMode(true); 
+                        editButton.textContent = "Edit Profile";
+                        isEditing = false;
+                    } else {
+                        applyEmployeeViewMode(false); 
+                        editButton.textContent = "Cancel Edit"; 
+                        isEditing = true;
+                    }
+                });
+            }
+        } catch (err) { 
+            console.warn('view-employee error', err); 
+        }
+
+        // Department/Designation filter for edit form
+        const deptSelect = document.getElementById('department_select');
+        const desSelect = document.getElementById('designation_select');
+        
+        if (deptSelect && desSelect) {
+            deptSelect.addEventListener('change', function() {
+                const deptId = this.value;
+                const options = desSelect.querySelectorAll('option');
+                
+                options.forEach(opt => {
+                    if (opt.dataset.department === deptId) {
+                        opt.style.display = 'block';
+                    } else if (opt.dataset.department) {
+                        opt.style.display = 'none';
+                    }
+                });
+                
+                if (desSelect.value && desSelect.querySelector(`option[value="${desSelect.value}"]`)?.style.display === 'none') {
+                    desSelect.value = '';
+                }
+            });
+        }
     }
 
-    if (cleanPath === '/employee') {
+    if (basePath === '/employee') {
         initEmployeeFilters();
+    handleEmployeeActions();
+    handleEmployeeActionConfirm();
     }
 
-    // Update Browser URL
-    const browserPath = `${BASE_PATH}${cleanPath}`;
-    if (window.location.pathname !== browserPath) {
-      history.pushState({ path: cleanPath }, '', browserPath);
+    if (basePath === '/view-department') {
+        initDepartmentViewFilters();
     }
 
-  } catch (err) {
-    target.innerHTML = `<p>Error: ${err.message}</p>`;
-  }
-
-  // --- UI UPDATES (Replaces the old loadSidebar calls) ---
-  
-  const HIDE_LAYOUT = ['/login'];
-  const shouldHideLayout = HIDE_LAYOUT.includes(cleanPath);
-
-  toggleLayout(shouldHideLayout);
-
-  if (!shouldHideLayout) {
-      updateActiveSidebar(cleanPath);
-  }
 }
 
-// --- HELPER FUNCTIONS ---
-
-/**
- * Toggles the visibility of the Sidebar and Navbar
- * by adding/removing a hidden class or style.
- */
+// HELPER FUNCTIONS
 function toggleLayout(hide) {
     const nav = document.getElementById('navigation');
-    const sidebar = document.getElementById('side-nav'); // Wrapper of the sidebar
+    const sidebar = document.getElementById('side-nav');
 
     if (hide) {
         if(nav) nav.style.display = 'none';
         if(sidebar) sidebar.style.display = 'none';
     } else {
-        if(nav) nav.style.display = 'block'; // or 'flex' depending on your css
+        if(nav) nav.style.display = 'block';
         if(sidebar) sidebar.style.display = 'block';
     }
 }
 
-/**
- * Finds the sidebar list item with the matching data-route
- * and adds the 'active' class, removing it from others.
- */
 function updateActiveSidebar(currentPath) {
     const sidebarItems = document.querySelectorAll('#admin-sidebar li[data-route]');
     
     sidebarItems.forEach(item => {
         const route = item.getAttribute('data-route');
         
-        // Exact match or checks if the current path starts with the route 
-        // (useful for sub-pages like /view-employee vs /employee)
         if (currentPath === route || (route !== '/home' && currentPath.startsWith(route))) {
             item.classList.add('active');
         } else {
@@ -191,13 +229,18 @@ function updateActiveSidebar(currentPath) {
     });
 }
 
-// back/forward handlers
+// BROWSER NAVIGATION
 window.addEventListener('popstate', (e) => {
-  navigate(e.state?.path || '/home');
+  const path = e.state?.path || '/home';
+  const query = e.state?.query || '';
+  navigate(query ? `${path}?${query}` : path);
 });
 
 function handleInitialLoad() {
   let initial = window.location.pathname.replace(BASE_PATH, '') || '/home';
+  if (window.location.search) {
+    initial += window.location.search;
+  }
   navigate(initial);
 }
 
@@ -205,13 +248,12 @@ handleInitialLoad();
 
 // GLOBAL EVENT LISTENERS
 document.addEventListener('click', function (e) {
-
   if (e.target.matches('#filter-btn')) {
     toggleFilterModal();
   }
 
   if (e.target.closest('#cancelPromptBtn')) {
-        closeModal();
+    closeModal();
   }
 
   const toggleBtn = e.target.closest('.passwordField span');
@@ -220,39 +262,30 @@ document.addEventListener('click', function (e) {
   }
 
   const confirmBtn = e.target.closest('#confirmPromptBtn');
-    
-    if (confirmBtn) {
-        const action = confirmBtn.getAttribute('data-action');
-
-        // Logic for Logout
-        if (action === 'logout') {
-            logout();     // Call the function from auth.js
-            closeModal(); // Close the modal
-        }
-        
-        // Future Logic (e.g., Delete Department)
-        // if (action === 'delete_department') { ... }
+  if (confirmBtn) {
+    const action = confirmBtn.getAttribute('data-action');
+    if (action === 'logout') {
+      logout();
+      closeModal();
     }
+  }
 
   const logoutBtn = e.target.closest('#logoutBtn'); 
   if (logoutBtn) {
-      e.preventDefault();
-      logout();
+    e.preventDefault();
+    logout();
   }
-
 });
 
-
 document.addEventListener('submit', function (e) {
-  // Department Forms
   if (e.target.id === 'addDepartmentForm') {
-    e.preventDefault(); // Prevent default HERE
+    e.preventDefault();
     handleDepartmentForms(e);
   }
   
-  if (e.target.id === 'add-employee-form') {
+  // Handle both add and edit employee forms
+  if (e.target.id === 'add-employee-form' || e.target.id === 'edit-employee-form') {
       e.preventDefault(); 
       handleEmployeeForms(e);
   }
-  // Add other forms here as needed
 });

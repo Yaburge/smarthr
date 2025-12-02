@@ -1,4 +1,5 @@
 <?php
+
 // includes/config.php
 $host = 'localhost';
 $dbname = 'smarthr_db';

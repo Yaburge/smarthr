@@ -96,13 +96,21 @@ export function initMultiStepForm(formId) {
     const form = document.querySelector(formId);
 
     // Safety check: If the form isn't on this page, stop.
-    if (!form) return;
+    if (!form) {
+        console.warn('Form not found:', formId);
+        return;
+    }
 
     const steps = form.querySelectorAll('.form-step');
     const tabs = form.querySelectorAll('.section-tabs .tabs'); 
     const nextBtns = form.querySelectorAll('.btn-next');
     const prevBtns = form.querySelectorAll('.btn-prev');
-    // const cancelBtn = form.querySelector('.btn-cancel'); // Not used in this function
+
+    console.log('Multi-step form initialized:', {
+        formId,
+        steps: steps.length,
+        tabs: tabs.length
+    });
 
     let currentStep = 0;
 
@@ -111,7 +119,15 @@ export function initMultiStepForm(formId) {
         // 1. Show/Hide Steps
         steps.forEach((step, index) => {
             // Only the current step is shown
-            step.style.display = (index === currentStep) ? 'block' : 'none';
+            if (index === currentStep) {
+                step.style.display = 'block';
+                step.style.opacity = '1';
+                step.style.visibility = 'visible';
+            } else {
+                step.style.display = 'none';
+                step.style.opacity = '0';
+                step.style.visibility = 'hidden';
+            }
         });
 
         // 2. Update Tab Styles (Highlight the active tab)
@@ -122,11 +138,14 @@ export function initMultiStepForm(formId) {
                 tab.classList.remove('active');
             }
         });
+
+        console.log('Current step:', currentStep);
     };
 
     // Event: Next Button
     nextBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent any default behavior
             // Validation logic can go here
             if (currentStep < steps.length - 1) {
                 currentStep++;
@@ -137,7 +156,8 @@ export function initMultiStepForm(formId) {
 
     // Event: Previous Button
     prevBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent any default behavior
             if (currentStep > 0) {
                 currentStep--;
                 updateStep();
@@ -145,15 +165,17 @@ export function initMultiStepForm(formId) {
         });
     });
 
-    // ✨ NEW LOGIC: Event Listener for Clickable Tabs
+    // Event Listener for Clickable Tabs
     tabs.forEach((tab, index) => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent any default behavior
             // Set the current step to the clicked tab's index
             currentStep = index; 
             updateStep();
         });
+        // Add pointer cursor to show tabs are clickable
+        tab.style.cursor = 'pointer';
     });
-    // ✨ END OF NEW LOGIC
 
     // Initialize the form to the first step
     updateStep();
