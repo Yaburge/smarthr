@@ -1,4 +1,5 @@
 <?php
+
 define('BASE_PATH', dirname(dirname(__DIR__)));
 require_once BASE_PATH . '/includes/config.php';
 require_once BASE_PATH . '/includes/queries/employees.php';

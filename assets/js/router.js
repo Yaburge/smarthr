@@ -9,6 +9,8 @@ import { closeModal } from './ui.js';
 import { handleLogin, logout } from '../../ajax/auth.js';
 import { handleDepartmentForms, initDepartmentViewFilters } from '../../ajax/departments.js';
 import { initEmployeeFilters, handleEmployeeForms, deleteEmployee, activateEmployee, deactivateEmployee } from '../../ajax/employees.js';
+import { handleAttendanceLog, initAttendanceAutoRefresh, initAttendanceFilters } from '../../ajax/attendance.js';
+
 
 const BASE_PATH = '/SmartHR';
 
@@ -30,6 +32,7 @@ const routes = {
 };
 
 export async function navigate(path) {
+  // Split path and query string
   const [cleanPath, queryString] = path.split('?');
   let basePath = cleanPath;
   
@@ -48,6 +51,7 @@ export async function navigate(path) {
   
   const file = routes[basePath] || routes['/404'];
   
+  // Build fetch path with query string
   let fetchPath = `${BASE_PATH}${file}`;
   if (queryString) {
     fetchPath += `?${queryString}`;
@@ -65,7 +69,7 @@ export async function navigate(path) {
       initPageScripts(basePath);
     }, 100);
 
-    // Update Browser URL
+    // Update Browser URL - include query string
     let browserPath = `${BASE_PATH}${basePath}`;
     if (queryString) {
       browserPath += `?${queryString}`;
@@ -197,6 +201,14 @@ function initPageScripts(basePath) {
         initDepartmentViewFilters();
     }
 
+    // Initialize attendance auto-refresh on attendance or employee view pages
+    if (basePath === '/attendance' || basePath === '/view-employee') {
+        initAttendanceAutoRefresh();
+    }
+
+    if (basePath === '/attendance') {
+        initAttendanceFilters();
+    }
 }
 
 // HELPER FUNCTIONS
@@ -227,7 +239,7 @@ function updateActiveSidebar(currentPath) {
     });
 }
 
-// BROWSER NAVIGATION
+// BROWSER NAVIGATION - updated to preserve query strings
 window.addEventListener('popstate', (e) => {
   const path = e.state?.path || '/home';
   const query = e.state?.query || '';
@@ -235,6 +247,7 @@ window.addEventListener('popstate', (e) => {
 });
 
 function handleInitialLoad() {
+  // Get full path including query string
   let initial = window.location.pathname.replace(BASE_PATH, '') || '/home';
   if (window.location.search) {
     initial += window.location.search;
@@ -284,14 +297,16 @@ document.addEventListener('click', function (e) {
             closeModal();
         }
     }
+    
+  if (e.target.closest('.attendance-btn')) {
+        handleAttendanceLog(e);
+    }
 
   const logoutBtn = e.target.closest('#logoutBtn'); 
   if (logoutBtn) {
     e.preventDefault();
     logout();
   }
-
-  
 });
 
 document.addEventListener('submit', function (e) {

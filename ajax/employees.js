@@ -5,8 +5,7 @@ export function handleEmployeeForms(e) {
     const formData = new FormData(form);
     const feedback = form.querySelector('#feedback');
     
-    // Determine action from data-action attribute
-    const action = form.getAttribute('data-action'); // 'create' or 'update'
+    const action = form.getAttribute('data-action');
     const endpoint = action === 'update' 
         ? 'actions/employee/update.php'
         : 'actions/employee/create.php';
@@ -18,7 +17,20 @@ export function handleEmployeeForms(e) {
     .then(r => r.json())
     .then(data => {
         if(feedback) {
-            feedback.innerHTML = data.message;
+            // Show different message for create vs update
+            if (data.success && action === 'create') {
+                feedback.innerHTML = `
+                    <div class="success-message">
+                        <p>${data.message}</p>
+                        <p><strong>Login Credentials Created:</strong></p>
+                        <p>Username: <strong>${data.username}</strong></p>
+                        <p>Password: <strong>${data.temporary_password}</strong></p>
+                        <p><small>Please save these credentials and share them with the employee securely.</small></p>
+                    </div>
+                `;
+            } else {
+                feedback.innerHTML = data.message;
+            }
             feedback.className = data.success ? 'feedback-message success' : 'feedback-message error';
         }
         
@@ -27,11 +39,10 @@ export function handleEmployeeForms(e) {
                 form.reset();
                 setTimeout(() => {
                     navigate('/employee'); 
-                }, 1500);
+                }, 5000); // Increased timeout to read credentials
             } else {
-                // For update, stay on page or reload
                 setTimeout(() => {
-                    location.reload(); // Refresh to show updated data
+                    location.reload();
                 }, 1500);
             }
         }
@@ -45,7 +56,6 @@ export function handleEmployeeForms(e) {
     });
 }
 
-// Initialize employee filters
 export function initEmployeeFilters() {
     const searchInput = document.getElementById('employeeSearchInput');
     const departmentFilter = document.getElementById('departmentFilter');
@@ -118,11 +128,7 @@ function setupPaginationListeners(callback) {
     });
 }
 
-
-// Add these functions to your employees.js file
-
 export function handleEmployeeActions() {
-    // Delete employee
     document.addEventListener('click', function(e) {
         const deleteBtn = e.target.closest('.delete-employee-btn');
         if (deleteBtn) {
@@ -131,13 +137,12 @@ export function handleEmployeeActions() {
             
             showConfirmModal(
                 'Delete Employee',
-                `Are you sure you want to delete ${employeeName}? This action cannot be undone.`,
+                `Are you sure you want to delete ${employeeName}? This will also delete their user account. This action cannot be undone.`,
                 'delete_employee',
                 employeeId
             );
         }
         
-        // Deactivate employee
         const deactivateBtn = e.target.closest('.deactivate-employee-btn');
         if (deactivateBtn) {
             const employeeId = deactivateBtn.getAttribute('data-employee-id');
@@ -145,13 +150,12 @@ export function handleEmployeeActions() {
             
             showConfirmModal(
                 'Deactivate Employee',
-                `Are you sure you want to deactivate ${employeeName}?`,
+                `Are you sure you want to deactivate ${employeeName}? This will also disable their login access.`,
                 'deactivate_employee',
                 employeeId
             );
         }
         
-        // Activate employee
         const activateBtn = e.target.closest('.activate-employee-btn');
         if (activateBtn) {
             const employeeId = activateBtn.getAttribute('data-employee-id');
@@ -159,7 +163,7 @@ export function handleEmployeeActions() {
             
             showConfirmModal(
                 'Activate Employee',
-                `Are you sure you want to activate ${employeeName}?`,
+                `Are you sure you want to activate ${employeeName}? This will also enable their login access.`,
                 'activate_employee',
                 employeeId
             );
@@ -168,7 +172,6 @@ export function handleEmployeeActions() {
 }
 
 function showConfirmModal(title, message, action, employeeId) {
-    // Assuming you have a modal in your HTML
     const modal = document.getElementById('confirmModal');
     const modalTitle = modal.querySelector('.modal-title');
     const modalMessage = modal.querySelector('.prompt-message');
@@ -193,7 +196,6 @@ export function deleteEmployee(id) {
     .then(r => r.json())
     .then(data => {
         if(data.success) {
-            // Optional: Show success feedback?
             location.reload(); 
         } else {
             alert(data.message);

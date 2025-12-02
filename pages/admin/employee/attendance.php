@@ -1,3 +1,45 @@
+<?php
+// FILE: pages/admin/employee/attendance.php
+require_once BASE_PATH . '/includes/queries/attendance.php';
+
+// Data fetching...
+$history = getEmployeeAttendanceHistory($employee_id);
+$today   = getTodayAttendance($employee_id);
+
+// Button Logic...
+$showTimeIn = false;
+$showTimeOut = false;
+$showCompleted = false;
+
+if (!$today) {
+    $showTimeIn = true;
+} elseif ($today['time_out'] === null) {
+    $showTimeOut = true;
+} else {
+    $showCompleted = true;
+}
+?>
+
+<div class="row-fixed align-center justify-between" style="margin-bottom: 20px;">
+    <h1 class="sub-header bold">Daily Logs</h1>
+    
+    <div>
+        <?php if ($showTimeIn): ?>
+            <button class="btn solidBtn attendance-btn" data-type="in" data-id="<?php echo $employee_id; ?>">
+                <i class="fa-solid fa-stopwatch"></i> Time In
+            </button>
+        <?php elseif ($showTimeOut): ?>
+            <button class="btn redBtn attendance-btn" data-type="out" data-id="<?php echo $employee_id; ?>">
+                <i class="fa-solid fa-right-from-bracket"></i> Time Out
+            </button>
+        <?php elseif ($showCompleted): ?>
+            <button class="btn outlineBtn" disabled>
+                <i class="fa-solid fa-check-circle"></i> Completed Today
+            </button>
+        <?php endif; ?>
+    </div>
+</div>
+
 <div class="table-container shadow rounded">
   <table>
     <thead>
@@ -12,38 +54,39 @@
     </thead>
 
     <tbody>
-      <tr>
-        <td data-cell="Date">November 25, 2025</td>
-        <td data-cell="Time In">09:28 AM</td>
-        <td data-cell="Time Out">07:00 PM</td>
-        <td data-cell="Breaks">00:30 Min</td>
-        <td data-cell="Working Hrs">09:02 Hrs</td>
-        <td data-cell="Status">
-          <p class="secondary-status">On Time</p>
-        </td>
-      </tr>
+      <?php if (empty($history)): ?>
+          <tr>
+              <td colspan="6" class="text-center gray-text padding-20">No attendance records found.</td>
+          </tr>
+      <?php else: ?>
+          
+          <?php foreach ($history as $row): ?>
+              <?php 
+                  $dateStr = date('F j, Y', strtotime($row['date']));
+                  $inStr   = date('h:i A', strtotime($row['time_in']));
+                  $outStr  = $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '-';
+                  $hrs     = $row['hours_worked'] ? $row['hours_worked'] . ' Hrs' : '-';
+                  $breaks  = "00:00 Min"; 
 
-      <tr>
-        <td data-cell="Date">November 18, 2025</td>
-        <td data-cell="Time In">09:28 AM</td>
-        <td data-cell="Time Out">07:00 PM</td>
-        <td data-cell="Breaks">00:30 Min</td>
-        <td data-cell="Working Hrs">09:02 Hrs</td>
-        <td data-cell="Status">
-          <p class="primary-status">Late</p>
-        </td>
-      </tr>
+                  // Status Colors - FIX: Added 'Present'
+                  $statusClass = 'secondary-status'; // Default Green
+                  if ($row['status'] == 'Late') $statusClass = 'primary-status'; 
+                  if ($row['status'] == 'Absent') $statusClass = 'tertiary-status'; 
+                  if ($row['status'] == 'Present') $statusClass = 'secondary-status'; // Green
+              ?>
+              <tr>
+                <td data-cell="Date"><?php echo $dateStr; ?></td>
+                <td data-cell="Time In"><?php echo $inStr; ?></td>
+                <td data-cell="Time Out"><?php echo $outStr; ?></td>
+                <td data-cell="Breaks"><?php echo $breaks; ?></td>
+                <td data-cell="Working Hrs"><?php echo $hrs; ?></td>
+                <td data-cell="Status">
+                  <p class="<?php echo $statusClass; ?>"><?php echo htmlspecialchars($row['status']); ?></p>
+                </td>
+              </tr>
+          <?php endforeach; ?>
 
-      <tr>
-        <td data-cell="Date">November 1, 2025</td>
-        <td data-cell="Time In">09:28 AM</td>
-        <td data-cell="Time Out">07:00 PM</td>
-        <td data-cell="Breaks">00:30 Min</td>
-        <td data-cell="Working Hrs">09:02 Hrs</td>
-        <td data-cell="Status">
-          <p class="tertiary-status">Absent</p>
-        </td>
-      </tr>
+      <?php endif; ?>
     </tbody>
 
   </table>

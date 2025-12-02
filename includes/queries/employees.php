@@ -7,32 +7,34 @@ function createEmployee($data) {
     try {
         $pdo->beginTransaction();
         
-        // Generate employee code (format: EMP-YYYY-XXXX)
+        // 1. CREATE USER ACCOUNT FIRST
+        $username = generateUsername($data['first_name']);
+        $password = $data['first_name'] . '123'; // firstname + 123
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        
+        $userSql = "INSERT INTO users (username, password_hash, role, is_active) 
+                    VALUES (?, ?, 'Employee', 1)";
+        $userStmt = $pdo->prepare($userSql);
+        $userStmt->execute([$username, $password_hash]);
+        
+        $user_id = $pdo->lastInsertId();
+        
+        // 2. Generate employee code (format: EMP-YYYY-XXXX)
         $year = date('Y');
         $code = generateEmployeeCode($year);
         
-        // Insert employee record - FIX: Use correct array keys from form
-        $sql = "INSERT INTO employees (
-                    employee_code, first_name, middle_initial, last_name, 
-                    birthdate, gender, marital_status, address, 
-                    phone_number, email, department_id, designation_id,
-                    employment_status, hire_date, degree_suffix,
-                    salary_amount, salary_type, allowance_amount,
-                    philhealth_no, pagibig_no, sss_no, tin_no,
-                    profile_picture
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
+        // 3. Prepare all parameters
+        $params = [
+            $user_id,
             $code,
-            $data['first_name'],           // Changed from 'firstname'
+            $data['first_name'],
             $data['middle_initial'] ?? null,
-            $data['last_name'],            // Changed from 'lastname'
+            $data['last_name'],
             $data['birthdate'] ?? null,
             $data['gender'],
             $data['marital_status'] ?? null,
             $data['address'] ?? null,
-            $data['phone_number'] ?? null,  // Changed from 'phone'
+            $data['phone_number'] ?? null,
             $data['email'] ?? null,
             $data['department_id'] ?? null,
             $data['designation_id'] ?? null,
@@ -46,11 +48,25 @@ function createEmployee($data) {
             $data['sss_no'] ?? null,
             $data['tin_no'] ?? null,
             $data['profile_pic_path'] ?? 'default_avatar.jpg'
-        ]);
+        ];
+        
+        // 4. Insert employee record (23 parameters, hire_date uses NOW())
+        $sql = "INSERT INTO employees (
+                    user_id, employee_code, first_name, middle_initial, last_name, 
+                    birthdate, gender, marital_status, address, 
+                    phone_number, email, department_id, designation_id,
+                    employment_status, hire_date, degree_suffix,
+                    salary_amount, salary_type, allowance_amount,
+                    philhealth_no, pagibig_no, sss_no, tin_no,
+                    profile_picture
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         
         $employee_id = $pdo->lastInsertId();
         
-        // Insert documents if any
+        // 5. Insert documents if any
         if (!empty($data['documents'])) {
             $sql = "INSERT INTO employee_documents (employee_id, document_type, file_path) VALUES (?, ?, ?)";
             $stmt = $pdo->prepare($sql);
@@ -66,7 +82,9 @@ function createEmployee($data) {
             'success' => true,
             'message' => 'Employee created successfully!',
             'employee_id' => $employee_id,
-            'employee_code' => $code
+            'employee_code' => $code,
+            'username' => $username,
+            'temporary_password' => $password // Return for display/email
         ];
         
     } catch (Exception $e) {
@@ -76,6 +94,36 @@ function createEmployee($data) {
             'message' => 'DB Error: ' . $e->getMessage()
         ];
     }
+}
+
+// NEW FUNCTION: Generate unique username
+function generateUsername($firstName) {
+    global $pdo;
+    
+    // Clean firstname: lowercase, remove spaces/special chars
+    $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $firstName));
+    
+    // Start with base username
+    $username = $baseUsername;
+    $counter = 1;
+    
+    // Check if username exists, if so, add numbers
+    while (true) {
+        $sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$username]);
+        $exists = $stmt->fetchColumn();
+        
+        if ($exists == 0) {
+            break; // Username is unique
+        }
+        
+        // Add counter to make it unique
+        $username = $baseUsername . $counter;
+        $counter++;
+    }
+    
+    return $username;
 }
 
 function generateEmployeeCode($year) {
@@ -102,25 +150,25 @@ function generateEmployeeCode($year) {
 function getAllEmployees() {
     global $pdo;
     
-    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name
+    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name, u.username
             FROM employees e
             LEFT JOIN departments d ON e.department_id = d.department_id
             LEFT JOIN designations des ON e.designation_id = des.designation_id
+            LEFT JOIN users u ON e.user_id = u.user_id
             ORDER BY e.created_at DESC";
     
     $stmt = $pdo->query($sql);
     return $stmt->fetchAll();
 }
 
-
-// Get employees by department
 function getEmployeesByDepartment($department_id) {
     global $pdo;
     
-    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name
+    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name, u.username
             FROM employees e
             LEFT JOIN departments d ON e.department_id = d.department_id
             LEFT JOIN designations des ON e.designation_id = des.designation_id
+            LEFT JOIN users u ON e.user_id = u.user_id
             WHERE e.department_id = ?
             ORDER BY e.created_at DESC";
     
@@ -141,21 +189,20 @@ function getEmployeeDocuments($employee_id) {
     return $stmt->fetchAll();
 }
 
-// UPDATE your existing getEmployeeById function
 function getEmployeeById($employee_id) {
     global $pdo;
     
-    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name
+    $sql = "SELECT e.*, d.name as department_name, des.name as designation_name, u.username
             FROM employees e
             LEFT JOIN departments d ON e.department_id = d.department_id
             LEFT JOIN designations des ON e.designation_id = des.designation_id
+            LEFT JOIN users u ON e.user_id = u.user_id
             WHERE e.employee_id = ?";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$employee_id]);
     $employee = $stmt->fetch();
     
-    // ADD THIS: Fetch documents if employee exists
     if ($employee) {
         $employee['documents'] = getEmployeeDocuments($employee_id);
         
@@ -291,8 +338,8 @@ function deleteEmployee($employee_id) {
     try {
         $pdo->beginTransaction();
         
-        // 1. Get info to delete files
-        $sql = "SELECT profile_picture FROM employees WHERE employee_id = ?";
+        // 1. Get employee info including user_id
+        $sql = "SELECT user_id, profile_picture FROM employees WHERE employee_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$employee_id]);
         $emp = $stmt->fetch();
@@ -312,13 +359,20 @@ function deleteEmployee($employee_id) {
             if (file_exists($docPath)) unlink($docPath);
         }
 
-        // 4. Delete Record (Cascades to documents/users/attendance usually, but manual delete is safer)
+        // 4. Delete Employee Record (will cascade to documents)
         $delSql = "DELETE FROM employees WHERE employee_id = ?";
         $delStmt = $pdo->prepare($delSql);
         $delStmt->execute([$employee_id]);
+        
+        // 5. Delete User Account
+        if ($emp && $emp['user_id']) {
+            $userDelSql = "DELETE FROM users WHERE user_id = ?";
+            $userDelStmt = $pdo->prepare($userDelSql);
+            $userDelStmt->execute([$emp['user_id']]);
+        }
 
         $pdo->commit();
-        return ['success' => true, 'message' => 'Employee deleted successfully'];
+        return ['success' => true, 'message' => 'Employee and user account deleted successfully'];
 
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -329,12 +383,26 @@ function deleteEmployee($employee_id) {
 function updateEmployeeStatus($employee_id, $status) {
     global $pdo;
     try {
+        $pdo->beginTransaction();
+        
+        // Update employee status
         $sql = "UPDATE employees SET employment_status = ? WHERE employee_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$status, $employee_id]);
         
+        // Also update user account active status
+        $userSql = "UPDATE users u 
+                    INNER JOIN employees e ON u.user_id = e.user_id 
+                    SET u.is_active = ? 
+                    WHERE e.employee_id = ?";
+        $userStmt = $pdo->prepare($userSql);
+        $isActive = ($status === 'Inactive') ? 0 : 1;
+        $userStmt->execute([$isActive, $employee_id]);
+        
+        $pdo->commit();
         return ['success' => true, 'message' => 'Status updated to ' . $status];
     } catch (Exception $e) {
+        $pdo->rollBack();
         return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
     }
 }
