@@ -11,7 +11,7 @@ import { handleLogin, logout } from '../../ajax/auth.js';
 import { handleDepartmentForms, initDepartmentViewFilters } from '../../ajax/departments.js';
 import { initEmployeeFilters, handleEmployeeForms, deleteEmployee, activateEmployee, deactivateEmployee } from '../../ajax/employees.js';
 import { handleAttendanceLog, initAttendanceAutoRefresh, initAttendanceFilters } from '../../ajax/attendance.js';
-
+import { handleLeaveRequest } from '../../ajax/leave.js';
 
 const BASE_PATH = '/SmartHR';
 
@@ -212,7 +212,7 @@ function initPageScripts(basePath) {
     if (basePath === '/attendance') {
         initAttendanceFilters();
     }
-    
+
     if (basePath === '/dashboard') {
         initClock();
     }
@@ -327,5 +327,10 @@ document.addEventListener('submit', function (e) {
   if (e.target.id === 'add-employee-form' || e.target.id === 'edit-employee-form') {
       e.preventDefault(); 
       handleEmployeeForms(e);
+  }
+
+  if (e.target.id === 'leaveRequestForm') {
+      e.preventDefault();
+      handleLeaveRequest(e);
   }
 });

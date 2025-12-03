@@ -24,7 +24,7 @@ if ($_SESSION['role'] === 'Admin' && isset($_POST['employee_id'])) {
     $stmt->execute([$_SESSION['user_id']]);
     $target_employee_id = $stmt->fetchColumn();
 }
-
+    
 if (!$target_employee_id) {
     echo json_encode(['success' => false, 'message' => 'Employee profile not found.']);
     exit;

@@ -1,4 +1,9 @@
 <?php 
+// ============================================
+// FILE PATH: pages/admin/dashboard.php
+// COMPLETE FILE
+// ============================================
+
 define('BASE_PATH', dirname(dirname(__DIR__)));
 require_once BASE_PATH . '/includes/config.php';
 require_once BASE_PATH . '/includes/queries/attendance.php';
@@ -11,13 +16,22 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 $role = $_SESSION['role'];
-$employee_id = $_SESSION['user_id'];
+$user_id = $_SESSION['user_id'];
+
+// Get employee_id for Employee role
+if ($role === 'Employee') {
+    $stmt = $pdo->prepare("SELECT employee_id FROM employees WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $employee_id = $stmt->fetchColumn();
+} else {
+    $employee_id = $user_id;
+}
 
 // Data fetching...
 $history = getEmployeeAttendanceHistory($employee_id);
-$today   = getTodayAttendance($employee_id);
+$today = getTodayAttendance($employee_id);
 
-// Button Logic...
+// Button Logic
 $showTimeIn = false;
 $showTimeOut = false;
 $showCompleted = false;
@@ -138,7 +152,15 @@ if (!$today) {
 <div class="flex-column gap-60">
   <div>
     <h1 class="sub-header bold">Good Morning, Dave!</h1>
-    <p class="gray-text">You are currently Clocked Out, Ready to start your day?</p>
+    <p class="gray-text">
+      <?php if ($showTimeIn): ?>
+        You are currently Clocked Out. Ready to start your day?
+      <?php elseif ($showTimeOut): ?>
+        You are currently Clocked In. Working hard!
+      <?php else: ?>
+        You have completed your shift for today. Great job!
+      <?php endif; ?>
+    </p>
   </div>
 
   <div class="flex-column">

@@ -1,49 +1,33 @@
 <?php 
-define('BASE_PATH', dirname(__DIR__));
+// 1. Safe Definition of Base Path (prevents redefining errors)
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(__DIR__));
+}
 require_once BASE_PATH . '/includes/config.php';
-global $pdo; 
 
-$role = $_SESSION['role'];
-$current_user_id = $_SESSION['user_id']; // This is the user_id you set
+// 2. Safe Session Access
+// Use 'Guest' if role is missing, null if user_id is missing
+$role = $_SESSION['role'] ?? 'Guest';
+$current_user_id = $_SESSION['user_id'] ?? null;
 
 $employee_id = null;
 
-// Before running the query, check if the database connection ($pdo) is actually available
-if (isset($current_user_id) && $pdo) {
-    // 1. Prepare the SQL query
-    // We select the employee_id from the employees table where the user_id matches
-    $sql = "SELECT employee_id FROM employees WHERE user_id = :user_id";
-    
-    // 2. Prepare the statement for execution using $pdo
-    $stmt = $pdo->prepare($sql);
-    
-    // 3. Bind the user_id parameter securely
-    // PDO::PARAM_INT is used as employee_id is typically an integer
-    $stmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
-    
-    // 4. Execute the query
-    if ($stmt->execute()) {
-        // 5. Fetch the result
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+// 3. Only run DB query if user is logged in
+if ($current_user_id && isset($pdo)) {
+    try {
+        $sql = "SELECT employee_id FROM employees WHERE user_id = :user_id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
         
-        if ($result) {
-            // Store the retrieved employee_id
-            $employee_id = $result['employee_id'];
-            // Optionally, save it to the session
-            $_SESSION['employee_id'] = $employee_id; 
-        } else {
-            // Handle case where no employee is found for the user_id
-            error_log("No employee found for user_id: " . $current_user_id);
+        if ($stmt->execute()) {
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                $employee_id = $result['employee_id'];
+                $_SESSION['employee_id'] = $employee_id; 
+            }
         }
-    } else {
-        // Handle database query execution error
-        error_log("Database query failed to execute.");
-    }
-} else {
-    // Error logging if $pdo is not set (only necessary for debugging)
-    if (!$pdo) {
-        // This will now catch the error if config.php failed to create $pdo
-        error_log("FATAL: Database connection variable \$pdo is not defined or is null after including config.php.");
+    } catch (PDOException $e) {
+        error_log("Sidebar Error: " . $e->getMessage());
     }
 }
 ?>
@@ -104,8 +88,7 @@ if (isset($current_user_id) && $pdo) {
 
         <?php endif; ?>
 
-        <!-- ✔ EMPLOYEE ONLY -->
-        <?php if ($role === 'Employee'): ?>
+        <?php if ($role === 'Employee' && $employee_id): ?>
         <li data-route="/view-employee" onclick="navigate('/view-employee?id=<?= $employee_id ?>'); setTimeout(closeAdminSidebar, 100);">
           <span class="icon"><i class="fa-solid fa-user fa-lg"></i></span>
           <span class="text">Profile</span>
@@ -116,7 +99,6 @@ if (isset($current_user_id) && $pdo) {
           <span class="text">Smart Bot</span>
         </li>
         <?php endif; ?>
-        <!-- ✔ EMPLOYEE ONLY -->
 
       </ul>
     </div>
