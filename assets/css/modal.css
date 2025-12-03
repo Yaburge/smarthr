@@ -1,0 +1,150 @@
+/*MODALS*/
+#modal-container,
+.filter-modal {
+	background-color: rgba(0, 0, 0, 0.6);
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100svw;
+	height: 100svh;
+	z-index: 1000;
+	pointer-events: auto;
+}
+
+#modal-center-content,
+.filter-modal-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--clr-neutral-100);
+  border-radius: 8px;
+  pointer-events: auto;
+
+  max-width: 400px;
+
+  max-height: 90svh;
+  overflow-y: auto;
+}
+
+#closeModal {
+  border: none;
+	background-color: transparent;
+	cursor: pointer;
+	font-size: var(--fs-600);
+  padding-right: var(--size-100);
+  color: var(--clr-neutral-900);
+}
+
+#modal-header {
+	display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--size-300) var(--size-400) 0 var(--size-500);
+
+  h3 {
+    font-family: var(--ff-heading);
+    text-transform: capitalize;
+    font-weight: var(--fw-bold);
+    color: var(--clr-neutral-900);
+  }
+}
+
+#modal-content {
+  padding: var(--size-500);
+  width: 100%;
+}
+/* MODALS */
+
+/* PROMPTS */
+.prompt-container {
+    text-align: center;
+}
+
+.prompt-message {
+    font-size: var(--fs-400);
+    margin-bottom: 1.5rem;
+}
+
+.prompt-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+/* PROMPTS */
+
+/* FILTERS */
+.filter-container {
+  position: relative;
+}
+
+#filter-modal {
+  display: none;
+}
+
+#filter-modal.open {
+  display: block;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-100);
+}
+
+.filter-group label {
+  font-size: var(--fs-200);
+  font-weight: var(--fw-bold);
+}
+
+.filter-group select,
+.filter-group input,
+.filter-group textarea {
+  padding: var(--size-200);
+  border-radius: 10px;
+  border: solid 1px var(--clr-neutral-400);
+  outline: none;
+  cursor: pointer;
+}
+
+.filter-group textarea {
+  resize: vertical;
+  width: 300px;
+  height: 100px;
+}
+
+.filter-action {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-200);
+}
+
+.filter-action button {
+  flex: 1;
+  flex-wrap: nowrap;
+}
+/* FILTERS */
+
+.no-scroll {
+  overflow: hidden;
+}
+
+.confirm {
+  color: limegreen;
+}
+
+.cancel {
+  color: orangered;
+}
+
+
+@media (max-width: 32em) { /*512 px*/
+  #modal-center-content
+  .filter-modal-content {
+    width: 95svw;
+  }
+
+  #modal-content {
+    padding: var(--size-400);
+  }
+}
