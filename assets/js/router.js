@@ -6,13 +6,24 @@ import {
   setupVerticalTabs,
   initClock
 } from './features.js';
+import { 
+    initPayrollFilters, 
+    handleAddDeduction, 
+    processPayroll, 
+    processAllPayroll,
+    exportPayslip,
+    exportAllPayroll,
+    generatePayroll
+} from '../../ajax/payroll.js';
 import { closeModal } from './ui.js';
 import { handleLogin, logout } from '../../ajax/auth.js';
 import { handleDepartmentForms, initDepartmentViewFilters } from '../../ajax/departments.js';
 import { initEmployeeFilters, handleEmployeeForms, deleteEmployee, activateEmployee, deactivateEmployee } from '../../ajax/employees.js';
 import { handleAttendanceLog, initAttendanceAutoRefresh, initAttendanceFilters } from '../../ajax/attendance.js';
-import { handleLeaveRequest } from '../../ajax/leave.js';
-
+import { handleLeaveRequest, handleLeaveAction, initLeaveFilters } from '../../ajax/leave.js';
+import { handleOvertimeRequest, handleOvertimeAction, initOvertimeFilters } from '../../ajax/overtime.js';
+import { handleHolidayCreate, handleHolidayEdit, handleHolidayDelete, initHolidayFilters } from '../../ajax/holiday.js';
+import { handleChatbotSubmit } from '../../ajax/chatbot.js';
 const BASE_PATH = '/SmartHR';
 
 const routes = {
@@ -46,7 +57,7 @@ export async function navigate(path) {
   }
 
   if (basePath === '' || basePath === '/') {
-    basePath = '/home';
+    basePath = '/dashboard';
   }
 
   const target = document.getElementById('display');
@@ -148,27 +159,27 @@ function initPageScripts(basePath) {
 
         // Apply view mode and setup vertical tabs
         try { 
-            applyEmployeeViewMode(true); // <-- This sets the initial disabled (view) state
-            setupVerticalTabs(initMultiStepForm);
+            applyEmployeeViewMode(true);
+            setupVerticalTabs(initMultiStepForm);
 
-            let isEditing = false; 
-            const editButton = document.getElementById("editBtn");
+            let isEditing = false; 
+            const editButton = document.getElementById("editBtn");
 
-            if (editButton) {
-                editButton.textContent = "Edit Profile"; 
-                editButton.addEventListener("click", () => {
-                    if (isEditing) {
-                        applyEmployeeViewMode(true); // <-- Click to set disabled (view) state
-                        editButton.textContent = "Edit Profile";
-                        isEditing = false;
-                    } else {
-                        applyEmployeeViewMode(false); // <-- Click to set enabled (edit) state
-                        editButton.textContent = "Cancel Edit"; 
-                        isEditing = true;
-                    }
-                });
-            }
-        } catch (err) { 
+            if (editButton) {
+                editButton.textContent = "Edit Profile"; 
+                editButton.addEventListener("click", () => {
+                    if (isEditing) {
+                        applyEmployeeViewMode(true);
+                        editButton.textContent = "Edit Profile";
+                        isEditing = false;
+                    } else {
+                        applyEmployeeViewMode(false);
+                        editButton.textContent = "Cancel Edit"; 
+                        isEditing = true;
+                    }
+                });
+            }
+        } catch (err) { 
             console.warn('view-employee error', err); 
         }
 
@@ -213,8 +224,33 @@ function initPageScripts(basePath) {
         initAttendanceFilters();
     }
 
+    if (basePath === '/leaves') {
+        initLeaveFilters();
+    }
+
+    if (basePath === '/overtime') {
+        initOvertimeFilters();
+    }
+
+    if (basePath === '/holiday') {
+        initHolidayFilters();
+    }
+
     if (basePath === '/dashboard') {
         initClock();
+    }
+
+    if (basePath === '/payroll') {
+        initPayrollFilters();
+    }
+
+
+    if (basePath === '/payroll-summary') {
+        // Add deduction form handler
+        const addDeductionForm = document.getElementById('addDeductionForm');
+        if (addDeductionForm) {
+            addDeductionForm.addEventListener('submit', handleAddDeduction);
+        }
     }
 
 }
@@ -239,7 +275,7 @@ function updateActiveSidebar(currentPath) {
     sidebarItems.forEach(item => {
         const route = item.getAttribute('data-route');
         
-        if (currentPath === route || (route !== '/home' && currentPath.startsWith(route))) {
+        if (currentPath === route || (route !== '/dashboard' && currentPath.startsWith(route))) {
             item.classList.add('active');
         } else {
             item.classList.remove('active');
@@ -249,14 +285,14 @@ function updateActiveSidebar(currentPath) {
 
 // BROWSER NAVIGATION - updated to preserve query strings
 window.addEventListener('popstate', (e) => {
-  const path = e.state?.path || '/home';
+  const path = e.state?.path || '/dashboard';
   const query = e.state?.query || '';
   navigate(query ? `${path}?${query}` : path);
 });
 
 function handleInitialLoad() {
   // Get full path including query string
-  let initial = window.location.pathname.replace(BASE_PATH, '') || '/home';
+  let initial = window.location.pathname.replace(BASE_PATH, '') || '/dashboard';
   if (window.location.search) {
     initial += window.location.search;
   }
@@ -306,6 +342,21 @@ document.addEventListener('click', function (e) {
         }
     }
     
+  const leaveBtn = e.target.closest('#confirmLeaveActionBtn');
+    if (leaveBtn) {
+        handleLeaveAction(leaveBtn);
+    }
+    
+  const overtimeBtn = e.target.closest('#confirmOvertimeActionBtn');
+    if (overtimeBtn) {
+        handleOvertimeAction(overtimeBtn);
+    }
+
+  const holidayDeleteBtn = e.target.closest('#confirmHolidayDeleteBtn');
+    if (holidayDeleteBtn) {
+        handleHolidayDelete(holidayDeleteBtn);
+    }
+    
   if (e.target.closest('.attendance-btn')) {
         handleAttendanceLog(e);
     }
@@ -315,6 +366,41 @@ document.addEventListener('click', function (e) {
     e.preventDefault();
     logout();
   }
+
+   // Process single payroll
+    const processSingleBtn = e.target.closest('.process-single-payroll');
+    if (processSingleBtn) {
+        const payrollId = processSingleBtn.getAttribute('data-payroll-id');
+        processPayroll(payrollId);
+    }
+    
+    // Process all payroll
+    const processAllBtn = e.target.closest('.process-all-payroll');
+    if (processAllBtn) {
+        const periodId = processAllBtn.getAttribute('data-period-id');
+        processAllPayroll(periodId);
+    }
+    
+    // Export payslip
+    const exportPayslipBtn = e.target.closest('.export-payslip');
+    if (exportPayslipBtn) {
+        const payrollId = exportPayslipBtn.getAttribute('data-payroll-id');
+        exportPayslip(payrollId);
+    }
+    
+    // Export all payroll
+    const exportAllBtn = e.target.closest('.export-all-payroll');
+    if (exportAllBtn) {
+        const periodId = exportAllBtn.getAttribute('data-period-id');
+        exportAllPayroll(periodId);
+    }
+    
+    // Generate payroll
+    const generateBtn = e.target.closest('.generate-payroll');
+    if (generateBtn) {
+        const periodId = generateBtn.getAttribute('data-period-id');
+        generatePayroll(periodId);
+    }
 });
 
 document.addEventListener('submit', function (e) {
@@ -333,4 +419,30 @@ document.addEventListener('submit', function (e) {
       e.preventDefault();
       handleLeaveRequest(e);
   }
+
+  if (e.target.id === 'overtimeRequestForm') {
+      e.preventDefault();
+      handleOvertimeRequest(e);
+  }
+
+  if (e.target.id === 'holidayCreateForm') {
+      e.preventDefault();
+      handleHolidayCreate(e);
+  }
+
+  if (e.target.id === 'holidayEditForm') {
+      e.preventDefault();
+      handleHolidayEdit(e);
+  }
+
+  if (e.target.id === 'chatbot-form') {
+        e.preventDefault();
+        handleChatbotSubmit(e);
+    }
 });
+
+window.processPayroll = processPayroll;
+window.processAllPayroll = processAllPayroll;
+window.exportPayslip = exportPayslip;
+window.exportAllPayroll = exportAllPayroll;
+window.generatePayroll = generatePayroll;

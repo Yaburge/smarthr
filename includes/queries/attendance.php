@@ -23,7 +23,7 @@ function getTodayAttendance($employee_id) {
 // Get attendance history
 function getEmployeeAttendanceHistory($employee_id, $limit = 30) {
     global $pdo;
-    $limit = (int)$limit; // Cast to integer
+    $limit = (int)$limit;
     $sql = "SELECT * FROM attendance WHERE employee_id = ? ORDER BY date DESC LIMIT " . $limit;
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$employee_id]);
@@ -95,7 +95,6 @@ function logTimeIn($employee_id) {
 }
 
 // Time Out Function with improved status logic
-// Time Out Function with improved status logic
 function logTimeOut($employee_id) {
     global $pdo;
     date_default_timezone_set('Asia/Manila');
@@ -113,15 +112,32 @@ function logTimeOut($employee_id) {
         return ['success' => false, 'message' => 'Already timed out today!'];
     }
     
+    // FIX 1: Check if time_in is NULL (shouldn't happen, but safety check)
+    if (!$record['time_in']) {
+        return ['success' => false, 'message' => 'Invalid time-in record!'];
+    }
+    
     // Get attendance settings
     $settings = getAttendanceSettings();
     $shift_end = $settings['shift_end_time']; // 17:00:00
     $break_duration = $settings['break_duration_minutes']; // 60 minutes
     
-    // Calculate hours worked (excluding break)
+    // FIX 2: Calculate hours worked with proper validation
     $time_in_timestamp = strtotime($record['time_in']);
     $time_out_timestamp = strtotime($time);
+    
+    // Ensure timestamps are valid
+    if ($time_in_timestamp === false || $time_out_timestamp === false) {
+        return ['success' => false, 'message' => 'Invalid time format!'];
+    }
+    
+    // Calculate total minutes worked
     $total_minutes = ($time_out_timestamp - $time_in_timestamp) / 60;
+    
+    // FIX 3: Prevent negative hours
+    if ($total_minutes < 0) {
+        return ['success' => false, 'message' => 'Time out cannot be before time in!'];
+    }
     
     // Only subtract break if worked more than break duration + 1 hour
     $working_minutes = $total_minutes;
@@ -131,16 +147,18 @@ function logTimeOut($employee_id) {
     
     $hours_worked = round($working_minutes / 60, 2);
     
-    // Ensure hours_worked is never negative
+    // FIX 4: Ensure hours_worked fits in DECIMAL(4,2) - max 99.99
     if ($hours_worked < 0) {
-        $hours_worked = 0;
+        $hours_worked = 0.00;
+    } elseif ($hours_worked > 99.99) {
+        $hours_worked = 99.99; // Cap at maximum
     }
     
     // Determine final status
     $status = $record['status']; // Keep existing status (Present or Late)
     $is_early_leave = 0;
     
-    // Check if early leave (before 5:00 PM)
+    // Check if early leave (before shift end time)
     $shift_end_timestamp = strtotime($shift_end);
     if ($time_out_timestamp < $shift_end_timestamp) {
         $status = 'Early Leave';

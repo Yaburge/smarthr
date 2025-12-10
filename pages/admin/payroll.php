@@ -1,29 +1,54 @@
-<section class="section">
+<?php
+define('BASE_PATH', dirname(dirname(__DIR__)));
+require_once BASE_PATH . '/includes/queries/payroll.php';
 
+// Get active period or latest
+$activePeriod = getActivePayrollPeriod();
+$allPeriods = getAllPayrollPeriods();
+
+$currentPeriodId = $_GET['period_id'] ?? ($activePeriod['period_id'] ?? null);
+
+if ($currentPeriodId) {
+    $result = getPayrollRecordsByPeriod($currentPeriodId, '', 1, 10);
+    $payrollRecords = $result['records'];
+    $summary = getPayrollSummary($currentPeriodId);
+    $currentPeriod = getPayrollPeriodById($currentPeriodId);
+} else {
+    $payrollRecords = [];
+    $summary = ['employee_count' => 0, 'total_gross' => 0, 'total_deductions' => 0, 'total_net' => 0];
+    $currentPeriod = null;
+}
+?>
+
+<section class="section">
   <form class="flex-column gap-40">
     <div class="row-fixed align-center">
       <div class="flex-column gap-10">
         <h1 class="sub-header bold">Payroll</h1>
         <p class="gray-text">All Payroll Summary</p>
       </div>
-      <!-- <button type="button" class="cta rounded" id="createBtn" onclick="navigate('/add-employee')">Add Employee</button> -->
+      <?php if ($currentPeriod && $currentPeriod['status'] === 'Draft'): ?>
+        <button type="button" class="cta rounded" onclick="generatePayroll(<?php echo $currentPeriodId; ?>)">
+          <i class="fa-solid fa-calculator"></i> Generate Payroll
+        </button>
+      <?php endif; ?>
     </div>
     
     <div class="grid grid-4">
-      <div class="flex-center bg-white rounded padding-50 shadow">
-        <p class="bold">48</p>
+      <div class="flex-center bg-white rounded padding-50 shadow payroll-summary-card">
+        <p class="bold"><?php echo $summary['employee_count']; ?></p>
         <p class="small-text gray-text">Employees to process</p>
       </div>
-      <div class="flex-center bg-white rounded padding-50 shadow">
-        <p class="bold">₱1,486,400.00</p>
+      <div class="flex-center bg-white rounded padding-50 shadow payroll-summary-card">
+        <p class="bold">₱<?php echo number_format($summary['total_gross'], 2); ?></p>
         <p class="small-text gray-text">Total Gross Pay</p>
       </div>
-      <div class="flex-center bg-white rounded padding-50 shadow">
-        <p class="bold">₱298,720.00</p>
+      <div class="flex-center bg-white rounded padding-50 shadow payroll-summary-card">
+        <p class="bold">₱<?php echo number_format($summary['total_deductions'], 2); ?></p>
         <p class="small-text gray-text">Total Deductions</p>
       </div>
-      <div class="flex-center bg-white rounded padding-50 shadow">
-        <p class="bold">₱1,187,680.00</p>
+      <div class="flex-center bg-white rounded padding-50 shadow payroll-summary-card">
+        <p class="bold">₱<?php echo number_format($summary['total_net'], 2); ?></p>
         <p class="small-text gray-text">Total Net Pay</p>
       </div>
     </div>
@@ -31,39 +56,25 @@
     <div class="table-search">
       <div class="searchField">
         <span><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" placeholder="Search">
+        <input type="text" id="payrollSearchInput" placeholder="Search employee...">
       </div>
 
       <div class="filter-container">
-        <button type="button" id="filter-btn" class="btn outlineBtn"><i class="fa-solid fa-filter"></i> Pay Period</button>
-        <div id='filter-modal' class='filter-modal'> 
-          <div class="filter-modal-content padding-40 flex-column gap-40">
-
-            <h1 class="sub-header bold">Select Pay Period</h1>
-
-            <div class="filter-group">
-              <select>
-                <option value="Monthly">Monthly</option>
-                <option value="Semi-Monthly">Semi-Monthly</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <select>
-                <option value="">November 16 - 30, 2025</option>
-                <option value="t">December 1 - 15, 2025</option>
-              </select>
-            </div>
-
-            <div class="filter-action">
-              <button type="button" id='filter-btn' class="btn outlineBtn">Cancel</button>
-              <button type="button" class="btn solidBtn">Apply</button>
-            </div>
-
-          </div>
-        </div>
+        <select id="periodFilter" class="btn outlineBtn">
+          <option value="">Select Pay Period</option>
+          <?php foreach ($allPeriods as $period): ?>
+            <?php 
+              $periodLabel = date('M d', strtotime($period['start_date'])) . ' - ' . 
+                           date('M d, Y', strtotime($period['end_date'])) . 
+                           ' (' . $period['type'] . ')';
+              $selected = ($period['period_id'] == $currentPeriodId) ? 'selected' : '';
+            ?>
+            <option value="<?php echo $period['period_id']; ?>" <?php echo $selected; ?>>
+              <?php echo $periodLabel; ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
       </div>
-
     </div>
   </form>
 
@@ -82,57 +93,83 @@
       </thead>
 
       <tbody>
-        <tr>
-          <td data-cell="ID">0001</td>
-          <td data-cell="Employee">
-            <div class="table-img-name">
-              <img src="assets/media/images/iso.jpg" alt="employee-picture" class="t-img">
-              <p>Christopher Dave T. Cupta</p>
-            </div> 
-          </td>
-          <td data-cell="Base Salary">₱22,500.00</td>
-          <td data-cell="Gross Pay">₱29,457.50</td>
-          <td data-cell="Total Deductions">
-            <p class="red-text">-₱6,202.35</p> 
-          </td>
-          <td data-cell="Net Pay">
-            <p class="green-text">₱23,347.62</p>
-          </td>
-          <td data-cell="Action">
-            <div class="table-btn">
-              <button class="tableBtn outlineBtn" onclick="navigate('/payroll-summary')"><i class="fa-regular fa-eye"></i></button>
-            </div>
-          </td>
-        </tr>
+        <?php if (empty($payrollRecords)): ?>
+          <tr>
+            <td colspan="7" class="text-center">
+              <?php if (!$currentPeriodId): ?>
+                No payroll period selected
+              <?php else: ?>
+                No payroll records found. Click "Generate Payroll" to create records.
+              <?php endif; ?>
+            </td>
+          </tr>
+        <?php else: ?>
+          <?php foreach ($payrollRecords as $record): ?>
+            <?php
+              $fullName = htmlspecialchars($record['first_name'] . ' ' . $record['last_name']);
+              $profilePic = htmlspecialchars($record['profile_picture']);
+            ?>
+            <tr>
+              <td data-cell="ID"><?php echo $record['employee_code']; ?></td>
+              <td data-cell="Employee">
+                <div class="table-img-name">
+                  <img src="/SmartHR/assets/media/uploads/<?php echo $profilePic; ?>" 
+                       alt="employee-picture" class="t-img"
+                       onerror="this.src='/SmartHR/assets/media/images/default_avatar.jpg'">
+                  <p><?php echo $fullName; ?></p>
+                </div> 
+              </td>
+              <td data-cell="Base Salary">₱<?php echo number_format($record['basic_salary_snapshot'], 2); ?></td>
+              <td data-cell="Gross Pay">₱<?php echo number_format($record['gross_pay'], 2); ?></td>
+              <td data-cell="Total Deductions">
+                <p class="red-text">-₱<?php echo number_format($record['total_deductions'], 2); ?></p> 
+              </td>
+              <td data-cell="Net Pay">
+                <p class="green-text">₱<?php echo number_format($record['net_pay'], 2); ?></p>
+              </td>
+              <td data-cell="Action">
+                <div class="table-btn">
+                  <button class="tableBtn outlineBtn" onclick="navigate('/payroll-summary?id=<?php echo $record['payroll_id']; ?>')">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </tbody>
 
       <tfoot>
         <tr>
           <td colspan="7">
             <div class="tfoot-container">
-              <p>Showing 1 to 4 of 20 results</p>
+              <p>Showing <?php echo min(1, count($payrollRecords)); ?> to <?php echo count($payrollRecords); ?> of <?php echo $result['total'] ?? 0; ?> results</p>
 
               <div class="pagination">
-                <button class="page-btn"><i class="fa-solid fa-angle-left"></i></button>
-                
-                <button class="page-number active">1</button>
-                <button class="page-number">2</button>
-                
-                <button class="page-btn"><i class="fa-solid fa-angle-right"></i></button>
+                <button class="page-btn" data-page="1"><i class="fa-solid fa-angle-left"></i></button>
+                <button class="page-number active" data-page="1">1</button>
+                <button class="page-btn" data-page="2"><i class="fa-solid fa-angle-right"></i></button>
               </div>
             </div>
           </td>
         </tr>
       </tfoot>
-
     </table>
   </div>
 
   <br>
 
-  <div class="row-fixed justify-right">
-    <button class="btn outlineBtn"><i class="fa-regular fa-file-excel"></i> Export Excel Payroll</button>
-    <button class="btn solidBtn"><i class="fa-solid fa-check"></i> Process All Payroll</button>
-  </div>
+  <?php if ($currentPeriod && !empty($payrollRecords)): ?>
+    <div class="row-fixed justify-right">
+      <button class="btn outlineBtn" onclick="exportAllPayroll(<?php echo $currentPeriodId; ?>)">
+        <i class="fa-regular fa-file-excel"></i> Export Excel Payroll
+      </button>
+      <?php if ($currentPeriod['status'] === 'Draft'): ?>
+        <button class="btn solidBtn" onclick="processAllPayroll(<?php echo $currentPeriodId; ?>)">
+          <i class="fa-solid fa-check"></i> Process All Payroll
+        </button>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
 </section>

@@ -43,16 +43,23 @@ if (!$today) {
           <?php foreach ($history as $row): ?>
               <?php 
                   $dateStr = date('F j, Y', strtotime($row['date']));
-                  $inStr   = date('h:i A', strtotime($row['time_in']));
-                  $outStr  = $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '-';
-                  $hrs     = $row['hours_worked'] ? $row['hours_worked'] . ' Hrs' : '-';
-                  $breaks  = "00:00 Min"; 
+                  
+                  // NULL-SAFE: Check if time_in exists before formatting
+                  $inStr = $row['time_in'] ? date('h:i A', strtotime($row['time_in'])) : '-';
+                  
+                  // NULL-SAFE: Check if time_out exists before formatting
+                  $outStr = $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '-';
+                  
+                  $hrs = $row['hours_worked'] ? $row['hours_worked'] . ' Hrs' : '-';
+                  $breaks = "00:00 Min"; 
 
-                  // Status Colors - FIX: Added 'Present'
-                  $statusClass = 'secondary-status'; // Default Green
-                  if ($row['status'] == 'Late') $statusClass = 'primary-status'; 
-                  if ($row['status'] == 'Absent') $statusClass = 'tertiary-status'; 
-                  if ($row['status'] == 'Present') $statusClass = 'secondary-status'; // Green
+                  // Status Colors
+                  $statusClass = 'secondary-status'; // Default Green (Present/On Leave)
+                  if ($row['status'] == 'Late') $statusClass = 'primary-status'; // Yellow/Orange
+                  if ($row['status'] == 'Absent') $statusClass = 'tertiary-status'; // Red
+                  if ($row['status'] == 'Half Day') $statusClass = 'primary-status'; // Yellow/Orange
+                  if ($row['status'] == 'Early Leave') $statusClass = 'primary-status'; // Yellow/Orange
+                  if ($row['status'] == 'On Leave') $statusClass = 'secondary-status'; // Green
               ?>
               <tr>
                 <td data-cell="Date"><?php echo $dateStr; ?></td>

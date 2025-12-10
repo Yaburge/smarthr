@@ -39,7 +39,7 @@ if ($current_user_id && isset($pdo)) {
     <div class="admin-top">
       <ul class="flex-column gap-10">
 
-        <li data-route="/home" onclick="navigate('/dashboard'); setTimeout(closeAdminSidebar, 100);">
+        <li data-route="/dashboard" onclick="navigate('/dashboard'); setTimeout(closeAdminSidebar, 100);">
           <span class="icon"><i class="fa-solid fa-bars-progress fa-lg"></i></span>
           <span class="text">Dashboard</span>
         </li>
@@ -93,10 +93,9 @@ if ($current_user_id && isset($pdo)) {
           <span class="icon"><i class="fa-solid fa-user fa-lg"></i></span>
           <span class="text">Profile</span>
         </li>
-
-        <li data-route="/chatbot" onclick="navigate('/chatbot'); setTimeout(closeAdminSidebar, 100);">
-          <span class="icon"><i class="fa-solid fa-robot fa-lg"></i></span>
-          <span class="text">Smart Bot</span>
+        <li data-route="/chatbot" onclick="navigate('/chatbot?id=<?= $employee_id ?>'); setTimeout(closeAdminSidebar, 100);">
+          <span class="icon"><i class="fa-solid fa-user fa-lg"></i></span>
+          <span class="text">Chatbot</span>
         </li>
         <?php endif; ?>
 

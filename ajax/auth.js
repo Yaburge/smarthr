@@ -39,15 +39,17 @@ export function handleLogin(e) {
 
 export function logout() {
     fetch('actions/auth/logout.php')
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Hard redirect to clear client state
-            window.location.href = '/SmartHR/login'; 
+            // Force redirect to login page
+            // Since base href is set, 'login' goes to /smarthr/login
+            navigate('/login');
         }
     })
-    .catch(error => {
-        console.error('Logout failed:', error);
-        window.location.href = '/SmartHR/login';
+    .catch(err => {
+        console.error('Logout error:', err);
+        // Fallback redirect
+        navigate('/login');
     });
 }

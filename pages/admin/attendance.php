@@ -26,9 +26,6 @@ $paginatedRecords = array_slice($attendanceRecords, 0, $perPage);
         <h1 class="sub-header bold">Attendance</h1>
         <p class="gray-text">All Employee Attendance - <?php echo date('F d, Y'); ?></p>
       </div>
-      <button type="button" class="cta rounded" onclick="navigate('/attendance-settings')">
-        <i class="fa-solid fa-gear"></i> Settings
-      </button>
     </div>
 
     <div class="table-search">
@@ -41,7 +38,7 @@ $paginatedRecords = array_slice($attendanceRecords, 0, $perPage);
         <button type="button" id="attendance-filter-btn" class="btn outlineBtn">
           <i class="fa-solid fa-filter"></i> Filter
         </button>
-        <div id='attendance-filter-modal' class='filter-modal'> 
+        <div id='attendance-filter-modal' class='filter-modal'  style='display: none;'> 
           <div class="filter-modal-content padding-40 flex-column gap-40">
             <h1 class="sub-header bold">Filter</h1>
 
